@@ -1,0 +1,703 @@
+<!DOCTYPE html>
+<html lang="es" class="h-full">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CONALEP Assistant - Plataforma Escolar</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Lucide Icons CDN -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: {
+                        conalep: {
+                            DEFAULT: '#006837',
+                            dark: '#004d28',
+                            light: '#008546',
+                            gold: '#D4AF37',
+                            emerald: '#10B981'
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+        body { font-family: 'Inter', sans-serif; }
+        .glass-panel {
+            background: rgba(255, 255, 255, 0.85);
+            backdrop-filter: blur(12px);
+        }
+        .dark .glass-panel {
+            background: rgba(17, 24, 39, 0.85);
+            backdrop-filter: blur(12px);
+        }
+        /* Custom Scrollbar */
+        ::-webkit-scrollbar { width: 6px; height: 6px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 9999px; }
+        .dark ::webkit-scrollbar-thumb { background: #334155; }
+    </style>
+</head>
+<body class="h-full bg-slate-50 dark:bg-slate-900 text-slate-800 dark:text-slate-100 transition-colors duration-200 antialiased flex flex-col">
+
+    <!-- Toast Notification System Container -->
+    <div id="toast-container" class="fixed top-5 right-5 z-50 flex flex-col gap-3 pointer-events-none"></div>
+
+    <!-- AUTH SCREEN (VISIBLE BY DEFAULT IF NO USER IS LOGGED IN) -->
+    <div id="auth-screen" class="min-h-screen w-full flex items-center justify-center p-4 bg-gradient-to-br from-conalep-dark via-conalep to-emerald-900 relative overflow-hidden">
+        <!-- Decorative Background Graphics -->
+        <div class="absolute -top-24 -left-24 w-96 h-96 bg-conalep-gold/20 rounded-full blur-3xl pointer-events-none"></div>
+        <div class="absolute -bottom-24 -right-24 w-96 h-96 bg-emerald-400/20 rounded-full blur-3xl pointer-events-none"></div>
+
+        <div class="w-full max-w-md bg-white dark:bg-slate-800 rounded-2xl shadow-2xl overflow-hidden z-10 border border-slate-100 dark:border-slate-700 transition-all">
+            <!-- Header Logo & Title -->
+            <div class="p-6 bg-slate-900 text-white text-center relative border-b border-conalep-gold/30">
+                <div class="inline-flex items-center justify-center w-16 h-16 rounded-full bg-conalep p-2 mb-3 shadow-lg ring-4 ring-conalep-gold/40">
+                    <i data-lucide="graduation-cap" class="w-10 h-10 text-white"></i>
+                </div>
+                <h1 class="text-2xl font-bold tracking-tight">CONALEP <span class="text-conalep-gold">Assistant</span></h1>
+                <p class="text-xs text-slate-300 mt-1">Plantel 165 - Portal Integrado</p>
+            </div>
+
+            <!-- Tabs: Login / Register / Recovery -->
+            <div class="flex border-b border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/50">
+                <button id="tab-btn-login" onclick="switchAuthTab('login')" class="flex-1 py-3 text-sm font-semibold text-conalep border-b-2 border-conalep dark:text-emerald-400 dark:border-emerald-400 transition-all">Iniciar Sesión</button>
+                <button id="tab-btn-register" onclick="switchAuthTab('register')" class="flex-1 py-3 text-sm font-medium text-slate-500 hover:text-slate-800 dark:text-slate-400 dark:hover:text-slate-200 transition-all">Registrarse</button>
+                <button id="tab-btn-recover" onclick="switchAuthTab('recover')" class="flex-1 py-3 text-sm font-medium text-slate-500 hover:text-slate-800 dark:text-slate-400 dark:hover:text-slate-200 transition-all">Asistencia</button>
+            </div>
+
+            <div class="p-6">
+                <!-- FORMULARIO 1: INICIO DE SESIÓN -->
+                <form id="form-login" onsubmit="handleLogin(event)" class="space-y-4">
+                    <div>
+                        <label class="block text-xs font-semibold uppercase tracking-wider text-slate-600 dark:text-slate-400 mb-1">Rol de Usuario</label>
+                        <select id="login-role" class="w-full px-3 py-2.5 rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-slate-800 dark:text-white focus:ring-2 focus:ring-conalep outline-none text-sm">
+                            <option value="estudiante">Estudiante</option>
+                            <option value="docente">Docente</option>
+                            <option value="administrativo">Administrativo</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-xs font-semibold uppercase tracking-wider text-slate-600 dark:text-slate-400 mb-1">Correo Institucional / Matrícula</label>
+                        <div class="relative">
+                            <i data-lucide="user" class="w-4 h-4 absolute left-3 top-3 text-slate-400"></i>
+                            <input type="text" id="login-username" required placeholder="ej. alu.202301@conalepmex.edu.mx" class="w-full pl-9 pr-3 py-2.5 rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-slate-800 dark:text-white focus:ring-2 focus:ring-conalep outline-none text-sm">
+                        </div>
+                    </div>
+                    <div>
+                        <label class="block text-xs font-semibold uppercase tracking-wider text-slate-600 dark:text-slate-400 mb-1">Contraseña</label>
+                        <div class="relative">
+                            <i data-lucide="lock" class="w-4 h-4 absolute left-3 top-3 text-slate-400"></i>
+                            <input type="password" id="login-password" required placeholder="••••••••" class="w-full pl-9 pr-3 py-2.5 rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-slate-800 dark:text-white focus:ring-2 focus:ring-conalep outline-none text-sm">
+                        </div>
+                    </div>
+                    <button type="submit" class="w-full py-3 bg-conalep hover:bg-conalep-dark text-white font-semibold rounded-lg shadow-lg hover:shadow-xl transition-all duration-200 flex items-center justify-center gap-2">
+                        <span>Ingresar a la Plataforma</span>
+                        <i data-lucide="arrow-right" class="w-4 h-4"></i>
+                    </button>
+                </form>
+
+                <!-- FORMULARIO 2: REGISTRO -->
+                <form id="form-register" onsubmit="handleRegister(event)" class="space-y-4 hidden">
+                    <div>
+                        <label class="block text-xs font-semibold uppercase tracking-wider text-slate-600 dark:text-slate-400 mb-1">Nombre Completo</label>
+                        <input type="text" id="reg-name" required placeholder="ej. Carlos Eduardo Ruiz" class="w-full px-3 py-2 rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-slate-800 dark:text-white text-sm">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-semibold uppercase tracking-wider text-slate-600 dark:text-slate-400 mb-1">Rol</label>
+                        <select id="reg-role" class="w-full px-3 py-2 rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-slate-800 dark:text-white text-sm">
+                            <option value="estudiante">Estudiante</option>
+                            <option value="docente">Docente</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-xs font-semibold uppercase tracking-wider text-slate-600 dark:text-slate-400 mb-1">Correo Institucional</label>
+                        <input type="email" id="reg-email" required placeholder="correo@conalepmex.edu.mx" class="w-full px-3 py-2 rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-slate-800 dark:text-white text-sm">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-semibold uppercase tracking-wider text-slate-600 dark:text-slate-400 mb-1">Contraseña</label>
+                        <input type="password" id="reg-pass" required placeholder="Crea una contraseña segura" class="w-full px-3 py-2 rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-slate-800 dark:text-white text-sm">
+                    </div>
+                    <button type="submit" class="w-full py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white font-semibold rounded-lg transition-all text-sm">
+                        Crear Cuenta Nueva
+                    </button>
+                </form>
+
+                <!-- FORMULARIO 3: RECUPERACIÓN / ASISTENCIA -->
+                <div id="form-recover" class="space-y-4 hidden">
+                    <p class="text-xs text-slate-600 dark:text-slate-300 leading-relaxed">
+                        Ingresa tu correo institucional registrado para enviar un enlace de restablecimiento o contactar a Servicios Escolares.
+                    </p>
+                    <div>
+                        <label class="block text-xs font-semibold uppercase tracking-wider text-slate-600 dark:text-slate-400 mb-1">Correo Institucional</label>
+                        <input type="email" id="recover-email" placeholder="ej. alu.202301@conalepmex.edu.mx" class="w-full px-3 py-2.5 rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-slate-800 dark:text-white text-sm">
+                    </div>
+                    <button onclick="handleRecovery()" class="w-full py-2.5 bg-slate-800 hover:bg-slate-900 text-white font-semibold rounded-lg transition-all text-sm">
+                        Solicitar Recuperación
+                    </button>
+                </div>
+
+                <!-- 1-CLICK DEMO LOGIN (ACCESO RÁPIDO) -->
+                <div class="mt-6 pt-5 border-t border-slate-200 dark:border-slate-700">
+                    <p class="text-xs font-semibold text-slate-500 dark:text-slate-400 text-center uppercase tracking-wider mb-3">Acceso Rápido de Prueba (Demo 1-Click)</p>
+                    <div class="grid grid-cols-3 gap-2">
+                        <button onclick="loginDemo('estudiante')" class="p-2 text-xs bg-slate-100 hover:bg-conalep/10 hover:text-conalep border border-slate-200 dark:bg-slate-700/50 dark:border-slate-600 dark:hover:bg-slate-700 rounded-lg font-medium text-center transition-all">
+                            <span class="block font-bold">Estudiante</span>
+                            <span class="text-[10px] text-slate-500 dark:text-slate-400">Grupo 403</span>
+                        </button>
+                        <button onclick="loginDemo('docente')" class="p-2 text-xs bg-slate-100 hover:bg-conalep/10 hover:text-conalep border border-slate-200 dark:bg-slate-700/50 dark:border-slate-600 dark:hover:bg-slate-700 rounded-lg font-medium text-center transition-all">
+                            <span class="block font-bold">Docente</span>
+                            <span class="text-[10px] text-slate-500 dark:text-slate-400">Prof. Informática</span>
+                        </button>
+                        <button onclick="loginDemo('administrativo')" class="p-2 text-xs bg-slate-100 hover:bg-conalep/10 hover:text-conalep border border-slate-200 dark:bg-slate-700/50 dark:border-slate-600 dark:hover:bg-slate-700 rounded-lg font-medium text-center transition-all">
+                            <span class="block font-bold">Admin</span>
+                            <span class="text-[10px] text-slate-500 dark:text-slate-400">Plantel 165</span>
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- MAIN APP INTERFACE (HIDDEN UNTIL AUTHENTICATED) -->
+    <div id="main-app" class="hidden flex-1 flex flex-col md:flex-row min-h-screen overflow-hidden">
+        <!-- Sidebar Navigation (Desktop) -->
+        <aside id="sidebar" class="w-64 bg-slate-900 text-white flex-shrink-0 flex flex-col justify-between transition-all duration-300 hidden md:flex border-r border-slate-800">
+            <div>
+                <!-- Brand Header -->
+                <div class="h-16 px-6 flex items-center justify-between border-b border-slate-800">
+                    <div class="flex items-center gap-3">
+                        <div class="w-9 h-9 rounded-lg bg-conalep flex items-center justify-center font-bold text-conalep-gold ring-2 ring-conalep-gold/30">
+                            C
+                        </div>
+                        <span class="font-bold text-lg tracking-wide">CONALEP<span class="text-conalep-gold">165</span></span>
+                    </div>
+                </div>
+
+                <!-- Nav Menu Options -->
+                <nav class="p-4 space-y-1.5">
+                    <button onclick="showSection('dashboard')" id="nav-dashboard" class="nav-btn w-full flex items-center gap-3 px-3.5 py-2.5 rounded-xl font-medium text-sm transition-all text-slate-300 hover:bg-slate-800 hover:text-white">
+                        <i data-lucide="layout-dashboard" class="w-5 h-5"></i>
+                        <span>Dashboard</span>
+                    </button>
+                    <button onclick="showSection('portfolio')" id="nav-portfolio" class="nav-btn w-full flex items-center gap-3 px-3.5 py-2.5 rounded-xl font-medium text-sm transition-all text-slate-300 hover:bg-slate-800 hover:text-white">
+                        <i data-lucide="folder-git-2" class="w-5 h-5"></i>
+                        <span>Portafolio de Evidencias</span>
+                    </button>
+                    <button onclick="showSection('schedules')" id="nav-schedules" class="nav-btn w-full flex items-center gap-3 px-3.5 py-2.5 rounded-xl font-medium text-sm transition-all text-slate-300 hover:bg-slate-800 hover:text-white">
+                        <i data-lucide="calendar" class="w-5 h-5"></i>
+                        <span>Horario Grupo 403</span>
+                    </button>
+                    <button onclick="showSection('admin')" id="nav-admin" class="nav-btn w-full flex items-center gap-3 px-3.5 py-2.5 rounded-xl font-medium text-sm transition-all text-slate-300 hover:bg-slate-800 hover:text-white">
+                        <i data-lucide="shield-check" class="w-5 h-5"></i>
+                        <span>Panel Administrativo</span>
+                    </button>
+                </nav>
+            </div>
+
+            <!-- Footer Badge -->
+            <div class="p-4 border-t border-slate-800">
+                <div class="p-3 bg-slate-800/60 rounded-xl text-xs text-slate-400 flex items-center justify-between">
+                    <span>Versión 2.5 SPA</span>
+                    <span class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
+                </div>
+            </div>
+        </aside>
+
+        <!-- Main Content Area -->
+        <div class="flex-1 flex flex-col min-w-0 bg-slate-50 dark:bg-slate-900 overflow-y-auto">
+            <!-- Header Bar -->
+            <header class="h-16 border-b border-slate-200 dark:border-slate-800 glass-panel sticky top-0 z-30 px-4 md:px-8 flex items-center justify-between">
+                <div class="flex items-center gap-3">
+                    <h2 id="section-title" class="text-lg font-bold text-slate-800 dark:text-white tracking-tight">Dashboard General</h2>
+                </div>
+
+                <!-- User Controls Header -->
+                <div class="flex items-center gap-4">
+                    <!-- Dark Mode Toggle -->
+                    <button onclick="toggleDarkMode()" class="p-2 text-slate-500 hover:text-slate-800 dark:text-slate-400 dark:hover:text-white rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 transition-all" title="Cambiar Tema">
+                        <i data-lucide="moon" class="w-5 h-5 dark:hidden"></i>
+                        <i data-lucide="sun" class="w-5 h-5 hidden dark:block"></i>
+                    </button>
+
+                    <!-- Active User Info Profile -->
+                    <div class="flex items-center gap-3 pl-3 border-l border-slate-200 dark:border-slate-700">
+                        <img id="user-avatar" src="https://placehold.co/100x100/006837/FFFFFF?text=UA" alt="Avatar" class="w-9 h-9 rounded-full object-cover ring-2 ring-conalep">
+                        <div class="hidden sm:block text-left">
+                            <p id="user-name" class="text-sm font-semibold text-slate-800 dark:text-white leading-tight">Usuario Activo</p>
+                            <p id="user-role-badge" class="text-xs text-emerald-600 dark:text-emerald-400 capitalize">Estudiante</p>
+                        </div>
+                        <button onclick="handleLogout()" class="p-2 text-rose-500 hover:bg-rose-50 dark:hover:bg-rose-950/30 rounded-lg transition-all ml-1" title="Cerrar Sesión">
+                            <i data-lucide="log-out" class="w-5 h-5"></i>
+                        </button>
+                    </div>
+                </div>
+            </header>
+
+            <!-- SECTION CONTENT CONTAINER -->
+            <main class="p-4 md:p-8 flex-1 max-w-7xl w-full mx-auto space-y-6">
+
+                <!-- 1. DASHBOARD SECTION -->
+                <section id="sec-dashboard" class="space-y-6">
+                    <!-- Welcome Banner -->
+                    <div class="p-6 rounded-2xl bg-gradient-to-r from-conalep to-conalep-dark text-white shadow-xl relative overflow-hidden flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
+                        <div class="z-10">
+                            <span class="px-2.5 py-1 rounded-full bg-white/20 text-xs font-semibold uppercase tracking-wider">Plantel 165 - PTB Informática</span>
+                            <h3 class="text-2xl font-bold mt-2">¡Bienvenido de nuevo, <span id="dash-user-firstname">Usuario</span>!</h3>
+                            <p class="text-sm text-emerald-100 mt-1 max-w-xl">Tienes 2 entregas de evidencias pendientes para esta semana y tus asistencias están en regla.</p>
+                        </div>
+                        <button onclick="showSection('portfolio')" class="z-10 px-4 py-2.5 bg-conalep-gold hover:bg-amber-400 text-slate-900 font-bold text-sm rounded-xl transition-all shadow-md">
+                            Subir Evidencias
+                        </button>
+                    </div>
+
+                    <!-- Metrics Cards -->
+                    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                        <div class="p-5 bg-white dark:bg-slate-800 rounded-2xl border border-slate-200 dark:border-slate-700 shadow-sm">
+                            <div class="flex items-center justify-between">
+                                <span class="text-xs font-semibold uppercase text-slate-500">Promedio General</span>
+                                <div class="p-2 bg-emerald-100 dark:bg-emerald-950/50 text-emerald-600 rounded-lg"><i data-lucide="award" class="w-5 h-5"></i></div>
+                            </div>
+                            <p class="text-2xl font-bold mt-2">9.4</p>
+                            <span class="text-xs text-emerald-500 font-medium">+0.3 respecto al parcial pasado</span>
+                        </div>
+                        <div class="p-5 bg-white dark:bg-slate-800 rounded-2xl border border-slate-200 dark:border-slate-700 shadow-sm">
+                            <div class="flex items-center justify-between">
+                                <span class="text-xs font-semibold uppercase text-slate-500">Evidencias Aprobadas</span>
+                                <div class="p-2 bg-blue-100 dark:bg-blue-950/50 text-blue-600 rounded-lg"><i data-lucide="check-circle-2" class="w-5 h-5"></i></div>
+                            </div>
+                            <p class="text-2xl font-bold mt-2">18 / 20</p>
+                            <span class="text-xs text-blue-500 font-medium">90% Completado</span>
+                        </div>
+                        <div class="p-5 bg-white dark:bg-slate-800 rounded-2xl border border-slate-200 dark:border-slate-700 shadow-sm">
+                            <div class="flex items-center justify-between">
+                                <span class="text-xs font-semibold uppercase text-slate-500">Asistencia Total</span>
+                                <div class="p-2 bg-purple-100 dark:bg-purple-950/50 text-purple-600 rounded-lg"><i data-lucide="user-check" class="w-5 h-5"></i></div>
+                            </div>
+                            <p class="text-2xl font-bold mt-2">96%</p>
+                            <span class="text-xs text-purple-500 font-medium">Grupo 403 PTB</span>
+                        </div>
+                        <div class="p-5 bg-white dark:bg-slate-800 rounded-2xl border border-slate-200 dark:border-slate-700 shadow-sm">
+                            <div class="flex items-center justify-between">
+                                <span class="text-xs font-semibold uppercase text-slate-500">Avisos del Plantel</span>
+                                <div class="p-2 bg-amber-100 dark:bg-amber-950/50 text-amber-600 rounded-lg"><i data-lucide="bell" class="w-5 h-5"></i></div>
+                            </div>
+                            <p class="text-2xl font-bold mt-2">3 Nuevos</p>
+                            <span class="text-xs text-amber-500 font-medium">Actualizado hoy</span>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- 2. PORTFOLIO OF EVIDENCE SECTION (DRAG & DROP) -->
+                <section id="sec-portfolio" class="space-y-6 hidden">
+                    <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                        <div>
+                            <h3 class="text-xl font-bold">Portafolio de Evidencias Digitales</h3>
+                            <p class="text-xs text-slate-500">Gestión de entregas por módulo profesional</p>
+                        </div>
+                        <div class="flex items-center gap-2">
+                            <select id="portfolio-module-filter" onchange="renderPortfolio()" class="px-3 py-2 rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-sm font-medium">
+                                <option value="all">Todos los Módulos</option>
+                                <option value="Programación Web">Programación Web (403)</option>
+                                <option value="Base de Datos">Bases de Datos Avanzadas</option>
+                                <option value="Redes Locales">Redes de Área Local</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <!-- Drag & Drop Upload Zone -->
+                    <div id="drop-zone" ondragover="handleDragOver(event)" ondragleave="handleDragLeave(event)" ondrop="handleDrop(event)" class="p-8 border-2 border-dashed border-conalep/40 dark:border-emerald-500/40 hover:border-conalep bg-conalep/5 dark:bg-emerald-950/10 rounded-2xl text-center transition-all cursor-pointer">
+                        <div class="w-12 h-12 rounded-full bg-conalep/10 dark:bg-emerald-500/20 text-conalep dark:text-emerald-400 flex items-center justify-center mx-auto mb-3">
+                            <i data-lucide="upload-cloud" class="w-6 h-6"></i>
+                        </div>
+                        <p class="text-sm font-semibold text-slate-700 dark:text-slate-200">Arrastra y suelta tus archivos aquí (PDF, ZIP, DOCX)</p>
+                        <p class="text-xs text-slate-500 mt-1">O haz clic para seleccionar archivos desde tu dispositivo (Máx 25MB)</p>
+                        <input type="file" id="file-input" onchange="handleFileSelect(event)" class="hidden" multiple>
+                        <button onclick="document.getElementById('file-input').click()" class="mt-4 px-4 py-2 bg-slate-800 dark:bg-slate-700 hover:bg-slate-900 text-white rounded-xl text-xs font-semibold transition-all">
+                            Seleccionar Archivos
+                        </button>
+                    </div>
+
+                    <!-- List of Submissions -->
+                    <div class="bg-white dark:bg-slate-800 rounded-2xl border border-slate-200 dark:border-slate-700 overflow-hidden shadow-sm">
+                        <div class="p-4 border-b border-slate-200 dark:border-slate-700 font-bold text-sm">
+                            Evidencias Registradas
+                        </div>
+                        <div id="portfolio-list" class="divide-y divide-slate-200 dark:divide-slate-700">
+                            <!-- Rendered dynamically -->
+                        </div>
+                    </div>
+                </section>
+
+                <!-- 3. SCHEDULES SECTION -->
+                <section id="sec-schedules" class="space-y-6 hidden">
+                    <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                        <div>
+                            <h3 class="text-xl font-bold">Horario de Clases - Grupo 403</h3>
+                            <p class="text-xs text-slate-500">Carrera PTB en Informática - Turno Matutino</p>
+                        </div>
+                        <div class="flex items-center gap-2">
+                            <span class="px-3 py-1 bg-conalep/10 text-conalep dark:text-emerald-400 font-bold text-xs rounded-full">Semestre Febrero-Julio</span>
+                        </div>
+                    </div>
+
+                    <!-- Schedule Grid -->
+                    <div class="overflow-x-auto rounded-2xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 shadow-sm">
+                        <table class="w-full text-left text-xs border-collapse">
+                            <thead>
+                                <tr class="bg-slate-100 dark:bg-slate-700/50 text-slate-700 dark:text-slate-200 border-b border-slate-200 dark:border-slate-700 uppercase font-semibold">
+                                    <th class="p-3.5 border-r border-slate-200 dark:border-slate-700">Hora</th>
+                                    <th class="p-3.5">Lunes</th>
+                                    <th class="p-3.5">Martes</th>
+                                    <th class="p-3.5">Miércoles</th>
+                                    <th class="p-3.5">Jueves</th>
+                                    <th class="p-3.5">Viernes</th>
+                                </tr>
+                            </thead>
+                            <tbody class="divide-y divide-slate-200 dark:divide-slate-700 text-slate-600 dark:text-slate-300">
+                                <tr>
+                                    <td class="p-3 font-semibold border-r border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800">07:00 - 08:40</td>
+                                    <td class="p-3 bg-emerald-50/50 dark:bg-emerald-950/20 font-medium text-emerald-700 dark:text-emerald-300">Prog. Web (Lab 2)</td>
+                                    <td class="p-3">Base de Datos</td>
+                                    <td class="p-3 bg-emerald-50/50 dark:bg-emerald-950/20 font-medium text-emerald-700 dark:text-emerald-300">Prog. Web (Lab 2)</td>
+                                    <td class="p-3">Inglés IV</td>
+                                    <td class="p-3">Redes Locales</td>
+                                </tr>
+                                <tr>
+                                    <td class="p-3 font-semibold border-r border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800">08:40 - 10:20</td>
+                                    <td class="p-3">Redes Locales</td>
+                                    <td class="p-3">Matemáticas Discretas</td>
+                                    <td class="p-3">Base de Datos</td>
+                                    <td class="p-3 bg-emerald-50/50 dark:bg-emerald-950/20 font-medium text-emerald-700 dark:text-emerald-300">Prog. Web (Lab 2)</td>
+                                    <td class="p-3">Tutorías</td>
+                                </tr>
+                                <tr>
+                                    <td class="p-3 font-semibold border-r border-slate-200 dark:border-slate-700 bg-slate-100 dark:bg-slate-700 text-center" colspan="6">
+                                        RECESO ESCOLAR (10:20 - 10:50)
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td class="p-3 font-semibold border-r border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800">10:50 - 12:30</td>
+                                    <td class="p-3">Ética Profesional</td>
+                                    <td class="p-3">Sistemas Operativos</td>
+                                    <td class="p-3">Inglés IV</td>
+                                    <td class="p-3">Matemáticas Discretas</td>
+                                    <td class="p-3">Sistemas Operativos</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </section>
+
+                <!-- 4. ADMIN PANEL SECTION -->
+                <section id="sec-admin" class="space-y-6 hidden">
+                    <div class="flex items-center justify-between">
+                        <div>
+                            <h3 class="text-xl font-bold">Panel de Control Administrativo</h3>
+                            <p class="text-xs text-slate-500">Plantel CONALEP 165 - Administración de Usuarios y Avisos</p>
+                        </div>
+                    </div>
+
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <!-- User Control List -->
+                        <div class="bg-white dark:bg-slate-800 p-5 rounded-2xl border border-slate-200 dark:border-slate-700 shadow-sm space-y-4">
+                            <h4 class="font-bold text-sm text-slate-800 dark:text-white flex items-center gap-2">
+                                <i data-lucide="users" class="w-4 h-4 text-conalep"></i> Usuarios Recientes Registrados
+                            </h4>
+                            <ul class="space-y-3 text-xs">
+                                <li class="flex items-center justify-between p-2.5 bg-slate-50 dark:bg-slate-700/50 rounded-xl">
+                                    <div>
+                                        <p class="font-semibold text-slate-800 dark:text-white">Carlos Eduardo Ruiz</p>
+                                        <p class="text-slate-500">Matrícula: 21094032 • Estudiante Grupo 403</p>
+                                    </div>
+                                    <span class="px-2 py-1 bg-emerald-100 text-emerald-700 rounded text-[10px] font-bold">Activo</span>
+                                </li>
+                                <li class="flex items-center justify-between p-2.5 bg-slate-50 dark:bg-slate-700/50 rounded-xl">
+                                    <div>
+                                        <p class="font-semibold text-slate-800 dark:text-white">Ing. Roberto Gómez</p>
+                                        <p class="text-slate-500">Docente • Módulo Prog. Web</p>
+                                    </div>
+                                    <span class="px-2 py-1 bg-emerald-100 text-emerald-700 rounded text-[10px] font-bold">Activo</span>
+                                </li>
+                            </ul>
+                        </div>
+
+                        <!-- Notice Publisher Form -->
+                        <div class="bg-white dark:bg-slate-800 p-5 rounded-2xl border border-slate-200 dark:border-slate-700 shadow-sm space-y-4">
+                            <h4 class="font-bold text-sm text-slate-800 dark:text-white flex items-center gap-2">
+                                <i data-lucide="megaphone" class="w-4 h-4 text-conalep"></i> Publicar Aviso Oficial del Plantel
+                            </h4>
+                            <div class="space-y-3">
+                                <div>
+                                    <label class="block text-xs font-medium text-slate-500 mb-1">Título del Aviso</label>
+                                    <input type="text" id="notice-title" placeholder="ej. Inicio de Periodo de Evaluación Parcial" class="w-full px-3 py-2 rounded-xl border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-xs">
+                                </div>
+                                <div>
+                                    <label class="block text-xs font-medium text-slate-500 mb-1">Mensaje / Detalle</label>
+                                    <textarea id="notice-body" rows="3" placeholder="Escribe la información detallada aquí..." class="w-full px-3 py-2 rounded-xl border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-xs"></textarea>
+                                </div>
+                                <button onclick="publishNotice()" class="w-full py-2.5 bg-conalep hover:bg-conalep-dark text-white font-semibold text-xs rounded-xl transition-all">
+                                    Enviar Aviso a Comunidad
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+
+            </main>
+        </div>
+
+        <!-- MOBILE BOTTOM NAVIGATION BAR -->
+        <nav class="md:hidden border-t border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 flex justify-around p-2 sticky bottom-0 z-40">
+            <button onclick="showSection('dashboard')" class="flex flex-col items-center gap-1 p-2 text-slate-500 focus:text-conalep">
+                <i data-lucide="layout-dashboard" class="w-5 h-5"></i>
+                <span class="text-[10px] font-semibold">Inicio</span>
+            </button>
+            <button onclick="showSection('portfolio')" class="flex flex-col items-center gap-1 p-2 text-slate-500 focus:text-conalep">
+                <i data-lucide="folder-git-2" class="w-5 h-5"></i>
+                <span class="text-[10px] font-semibold">Evidencias</span>
+            </button>
+            <button onclick="showSection('schedules')" class="flex flex-col items-center gap-1 p-2 text-slate-500 focus:text-conalep">
+                <i data-lucide="calendar" class="w-5 h-5"></i>
+                <span class="text-[10px] font-semibold">Horario</span>
+            </button>
+            <button onclick="showSection('admin')" class="flex flex-col items-center gap-1 p-2 text-slate-500 focus:text-conalep">
+                <i data-lucide="shield-check" class="w-5 h-5"></i>
+                <span class="text-[10px] font-semibold">Admin</span>
+            </button>
+        </nav>
+    </div>
+
+    <!-- APPLICATION JAVASCRIPT LOGIC -->
+    <script>
+        // DEMO USERS PRESETS
+        const DEMO_USERS = {
+            estudiante: {
+                name: "Carlos Ruiz",
+                role: "Estudiante",
+                email: "alu.21094032@conalepmex.edu.mx",
+                avatar: "https://placehold.co/100x100/006837/FFFFFF?text=CR"
+            },
+            docente: {
+                name: "Ing. Roberto Gómez",
+                role: "Docente",
+                email: "doc.rgomez@conalepmex.edu.mx",
+                avatar: "https://placehold.co/100x100/D4AF37/111827?text=RG"
+            },
+            administrativo: {
+                name: "Lic. Martha Sánchez",
+                role: "Administrativo",
+                email: "admin.165@conalepmex.edu.mx",
+                avatar: "https://placehold.co/100x100/10B981/FFFFFF?text=MS"
+            }
+        };
+
+        // MOCK INITIAL EVIDENCES
+        let portfolioData = [
+            { id: 1, name: "Practica1_LayoutResponsivo.pdf", module: "Programación Web", date: "2026-03-28", status: "Calificado", grade: "10" },
+            { id: 2, name: "Script_DB_Hospital.sql", module: "Base de Datos", date: "2026-04-01", status: "Entregado", grade: "Pendiente" }
+        ];
+
+        // INITIALIZATION
+        window.onload = function() {
+            lucide.createIcons();
+            checkSession();
+        };
+
+        // TOAST NOTIFICATIONS
+        function showToast(message, type = 'success') {
+            const container = document.getElementById('toast-container');
+            const toast = document.createElement('div');
+            toast.className = `p-4 rounded-xl shadow-xl text-white text-xs font-semibold flex items-center gap-2 transform transition-all duration-300 translate-y-2 pointer-events-auto ${type === 'success' ? 'bg-conalep' : 'bg-rose-600'}`;
+            toast.innerHTML = `<i data-lucide="${type === 'success' ? 'check-circle-2' : 'alert-circle'}" class="w-4 h-4"></i> <span>${message}</span>`;
+            container.appendChild(toast);
+            lucide.createIcons();
+            setTimeout(() => {
+                toast.classList.add('opacity-0', '-translate-y-2');
+                setTimeout(() => toast.remove(), 300);
+            }, 3000);
+        }
+
+        // AUTHENTICATION TAB SWITCHING
+        function switchAuthTab(tab) {
+            document.getElementById('form-login').classList.toggle('hidden', tab !== 'login');
+            document.getElementById('form-register').classList.toggle('hidden', tab !== 'register');
+            document.getElementById('form-recover').classList.toggle('hidden', tab !== 'recover');
+
+            document.getElementById('tab-btn-login').className = tab === 'login' ? 'flex-1 py-3 text-sm font-semibold text-conalep border-b-2 border-conalep dark:text-emerald-400 dark:border-emerald-400' : 'flex-1 py-3 text-sm font-medium text-slate-500 hover:text-slate-800 dark:text-slate-400';
+            document.getElementById('tab-btn-register').className = tab === 'register' ? 'flex-1 py-3 text-sm font-semibold text-conalep border-b-2 border-conalep dark:text-emerald-400 dark:border-emerald-400' : 'flex-1 py-3 text-sm font-medium text-slate-500 hover:text-slate-800 dark:text-slate-400';
+            document.getElementById('tab-btn-recover').className = tab === 'recover' ? 'flex-1 py-3 text-sm font-semibold text-conalep border-b-2 border-conalep dark:text-emerald-400 dark:border-emerald-400' : 'flex-1 py-3 text-sm font-medium text-slate-500 hover:text-slate-800 dark:text-slate-400';
+        }
+
+        // LOGIN ACTIONS
+        function loginUser(userData) {
+            localStorage.setItem('conalep_user', JSON.stringify(userData));
+            updateUserUI(userData);
+            document.getElementById('auth-screen').classList.add('hidden');
+            document.getElementById('main-app').classList.remove('hidden');
+            showToast(`¡Bienvenido/a, ${userData.name}!`);
+            showSection('dashboard');
+        }
+
+        function loginDemo(roleKey) {
+            loginUser(DEMO_USERS[roleKey]);
+        }
+
+        function handleLogin(e) {
+            e.preventDefault();
+            const role = document.getElementById('login-role').value;
+            const username = document.getElementById('login-username').value;
+            const user = {
+                name: username.split('@')[0] || "Usuario",
+                role: role.charAt(0).toUpperCase() + role.slice(1),
+                email: username,
+                avatar: `https://placehold.co/100x100/006837/FFFFFF?text=${username.charAt(0).toUpperCase()}`
+            };
+            loginUser(user);
+        }
+
+        function handleRegister(e) {
+            e.preventDefault();
+            const name = document.getElementById('reg-name').value;
+            const role = document.getElementById('reg-role').value;
+            const email = document.getElementById('reg-email').value;
+            loginUser({
+                name: name,
+                role: role.charAt(0).toUpperCase() + role.slice(1),
+                email: email,
+                avatar: `https://placehold.co/100x100/10B981/FFFFFF?text=${name.charAt(0).toUpperCase()}`
+            });
+        }
+
+        function handleRecovery() {
+            const email = document.getElementById('recover-email').value;
+            if (email) {
+                showToast("Enlace de recuperación enviado al correo registrado.");
+                switchAuthTab('login');
+            } else {
+                showToast("Por favor ingresa un correo válido.", 'error');
+            }
+        }
+
+        function checkSession() {
+            const saved = localStorage.getItem('conalep_user');
+            if (saved) {
+                loginUser(JSON.parse(saved));
+            }
+        }
+
+        function handleLogout() {
+            localStorage.removeItem('conalep_user');
+            document.getElementById('main-app').classList.add('hidden');
+            document.getElementById('auth-screen').classList.remove('hidden');
+            showToast("Sesión cerrada correctamente.");
+        }
+
+        function updateUserUI(user) {
+            document.getElementById('user-name').innerText = user.name;
+            document.getElementById('user-role-badge').innerText = user.role;
+            document.getElementById('user-avatar').src = user.avatar;
+            document.getElementById('dash-user-firstname').innerText = user.name.split(' ')[0];
+        }
+
+        // DYNAMIC NAVIGATION
+        function showSection(sectionId) {
+            const sections = ['dashboard', 'portfolio', 'schedules', 'admin'];
+            sections.forEach(sec => {
+                document.getElementById(`sec-${sec}`).classList.toggle('hidden', sec !== sectionId);
+            });
+
+            // Update Page Title
+            const titles = {
+                dashboard: "Dashboard General",
+                portfolio: "Portafolio de Evidencias Digitales",
+                schedules: "Horarios - Grupo 403 PTB",
+                admin: "Panel Administrativo Plantel 165"
+            };
+            document.getElementById('section-title').innerText = titles[sectionId];
+
+            if (sectionId === 'portfolio') renderPortfolio();
+            lucide.createIcons();
+        }
+
+        // PORTFOLIO LOGIC
+        function renderPortfolio() {
+            const filter = document.getElementById('portfolio-module-filter').value;
+            const container = document.getElementById('portfolio-list');
+            const items = filter === 'all' ? portfolioData : portfolioData.filter(i => i.module === filter);
+
+            if (items.length === 0) {
+                container.innerHTML = `<div class="p-6 text-center text-xs text-slate-400">No hay evidencias registradas en este módulo.</div>`;
+                return;
+            }
+
+            container.innerHTML = items.map(item => `
+                <div class="p-4 flex items-center justify-between text-xs hover:bg-slate-50 dark:hover:bg-slate-700/30 transition-all">
+                    <div class="flex items-center gap-3">
+                        <div class="p-2 bg-slate-100 dark:bg-slate-700 text-conalep dark:text-emerald-400 rounded-lg">
+                            <i data-lucide="file-text" class="w-5 h-5"></i>
+                        </div>
+                        <div>
+                            <p class="font-bold text-slate-800 dark:text-white">${item.name}</p>
+                            <p class="text-slate-400">${item.module} • ${item.date}</p>
+                        </div>
+                    </div>
+                    <div class="flex items-center gap-3">
+                        <span class="px-2.5 py-1 rounded-full font-semibold ${item.status === 'Calificado' ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-950/50 dark:text-emerald-400' : 'bg-amber-100 text-amber-700 dark:bg-amber-950/50 dark:text-amber-400'}">${item.status} (${item.grade})</span>
+                    </div>
+                </div>
+            `).join('');
+            lucide.createIcons();
+        }
+
+        // DRAG AND DROP HANDLERS
+        function handleDragOver(e) { e.preventDefault(); e.currentTarget.classList.add('border-conalep', 'bg-conalep/10'); }
+        function handleDragLeave(e) { e.preventDefault(); e.currentTarget.classList.remove('border-conalep', 'bg-conalep/10'); }
+        function handleDrop(e) {
+            e.preventDefault();
+            e.currentTarget.classList.remove('border-conalep', 'bg-conalep/10');
+            if (e.dataTransfer.files.length > 0) processUploadedFiles(e.dataTransfer.files);
+        }
+        function handleFileSelect(e) {
+            if (e.target.files.length > 0) processUploadedFiles(e.target.files);
+        }
+        function processUploadedFiles(files) {
+            Array.from(files).forEach(file => {
+                portfolioData.unshift({
+                    id: Date.now(),
+                    name: file.name,
+                    module: document.getElementById('portfolio-module-filter').value === 'all' ? 'Programación Web' : document.getElementById('portfolio-module-filter').value,
+                    date: new Date().toISOString().split('T')[0],
+                    status: 'Entregado',
+                    grade: 'Pendiente'
+                });
+            });
+            showToast(`${files.length} archivo(s) cargado(s) exitosamente.`);
+            renderPortfolio();
+        }
+
+        // ADMIN NOTICE PUBLISH
+        function publishNotice() {
+            const title = document.getElementById('notice-title').value;
+            if (title) {
+                showToast("Aviso publicado a la comunidad escolar.");
+                document.getElementById('notice-title').value = '';
+                document.getElementById('notice-body').value = '';
+            } else {
+                showToast("Por favor escribe un título para el aviso.", 'error');
+            }
+        }
+
+        // DARK MODE TOGGLE
+        function toggleDarkMode() {
+            document.documentElement.classList.toggle('dark');
+        }
+    </script>
+</body>
+</html>
